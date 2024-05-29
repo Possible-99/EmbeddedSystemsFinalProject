@@ -21,33 +21,24 @@ The system plays a startup image and sound when it is initialized, enhancing the
 ### Prerequisites
 Ensure the following software is installed on your system:
 - Python 3.x
-- Pygame
-- Mednafen
-- pyudev
-- psutil
 
 ### Installation
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/retro-game-console.git
-    cd retro-game-console
+    git clone https://github.com/Possible-99/EmbeddedSystemsFinalProject.git
+    cd EmbeddedSystemsFinalProject
     ```
 
-2. Ensure Mednafen is installed:
+2. Give permissions and run setup script for installing dependencies and loading some settings
     ```bash
-    sudo apt-get install mednafen
+        chmod +x setup.sh
+        sudo ./setup.sh
     ```
 
 ### Running the Project
 
-1. Set up environment variables for the framebuffer:
-    ```bash
-    export SDL_VIDEODRIVER=fbcon
-    export SDL_FBDEV=/dev/fb0
-    ```
-
-2. Run the main script:
+1. Run the app:
     ```bash
     sudo python app.py
     ```
@@ -55,7 +46,7 @@ Ensure the following software is installed on your system:
 ### Usage
 
 - Navigate the game list using the joystick.
-- Press the select button on the joystick to start a game.
+- Press A button for selecting a game.
 - Insert a USB device with new ROMs to automatically copy them to the system.
 
 ## Code Overview

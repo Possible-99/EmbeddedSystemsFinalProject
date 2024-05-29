@@ -1,3 +1,19 @@
+"""
+Author: Juan Sanchez
+License: MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation 
+the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, 
+and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
 from abc import ABC, abstractmethod
 import os
 import pygame
@@ -12,35 +28,32 @@ import time
 # State interface
 class State(ABC):
     @abstractmethod
-    # Manage transitions of state, depending on the event
     def handle_event(self, context, event):
+        # Manage state transitions based on the event
         pass
 
-# Flag to stop the Mednafen thread
-stop_thread = False   
+# Flag to signal stopping the Mednafen thread
+stop_thread = False
 
-# Function to run Mednafen emulator with a specified game
+# Function to run the Mednafen emulator with a specified game
 def run_mednafen(game_path):
     global stop_thread
     print("Executing on this game path " + game_path)
     process = subprocess.Popen(["sudo", '/usr/games/mednafen', game_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # Get the process ID
-    proc = psutil.Process(process.pid)
+    proc = psutil.Process(process.pid)  # Get the process ID
     
-    # Check periodically if the process should be stopped
+    # Periodically check if the process should be stopped
     while process.poll() is None:
         if stop_thread:
-            # Kill child processes with sudo
-            for child in proc.children(recursive=True):
+            for child in proc.children(recursive=True):  # Kill child processes
                 subprocess.run(["sudo", "kill", "-9", str(child.pid)])
-            # Kill main process with sudo
-            subprocess.run(["sudo", "kill", "-9", str(proc.pid)])
+            subprocess.run(["sudo", "kill", "-9", str(proc.pid)])  # Kill main process
             break
     process.wait()
     stop_thread = False
     return process.returncode
 
-# Function to handle event after Mednafen has finished running
+# Function to handle the event after Mednafen has finished running
 def mednafen_finished_event():
     other_events.append(Event(Event.GAME_CLOSED))
 
@@ -63,18 +76,18 @@ class GameMenuState(State):
     def handle_event(self, context, event):
         global games_list
         if event.event_type == Event.JOYSTICK_MOVED:
-            self.render(context, event.data['games_list'])
+            self.render(context, event.data['games_list'])  # Render game list on joystick movement
         elif event.event_type == Event.USB_DETECTED:
             mount_point = mount_usb(event.data["device"])
             copy_roms(mount_point , "./roms")
             unmount_usb(mount_point)
             games_list = get_names_in_folder("./roms/")
-            context.state.render(context, games_list) 
+            context.state.render(context, games_list)  # Re-render game list after USB detection
         elif event.event_type == Event.PRESSED_BUTTON:
-            pygame.quit()
+            pygame.quit()  # Quit pygame to launch the game
             mednafen_process_thread = threading.Thread(target = mednafen_thread , args = (event.data["name"], ))
-            mednafen_process_thread.start()
-            context.state = PlayingGameState()
+            mednafen_process_thread.start()  # Start Mednafen thread
+            context.state = PlayingGameState()  # Transition to PlayingGameState
 
     def render(self, context, games_list):
         info = pygame.display.Info()
@@ -134,14 +147,14 @@ class GameMenuState(State):
             element_rect = pygame.Rect(instruction_x, element_y, list_bg_width - 40, element_height)
 
             if element_rect.collidepoint((self.pointer_x, self.pointer_y)):
-                pygame.draw.rect(screen, colors["list_element_hover_bg"], element_rect)
+                pygame.draw.rect(screen, colors["list_element_hover_bg"], element_rect)  # Highlight hovered element
             else:
                 pygame.draw.rect(screen, colors["list_element_bg"], element_rect)
 
             draw_text(game, colors["text"], screen, element_rect.x + 10, element_rect.y + 10)
 
             if joystick.get_button(0) and element_rect.collidepoint((self.pointer_x, self.pointer_y)):
-                pygame.event.post(pygame.event.Event(pygame.USEREVENT, name=game))
+                pygame.event.post(pygame.event.Event(pygame.USEREVENT, name=game))  # Post event if button is pressed
                 return
 
         pygame.draw.circle(screen, colors["text"], (self.pointer_x, self.pointer_y), 5)
@@ -177,7 +190,7 @@ class Event:
         self.event_type = event_type
         self.data = kwargs
 
-# Context
+# Context class to maintain current state
 class Context:
     def __init__(self):
         self.state = GameMenuState()  # Initial state
@@ -258,27 +271,22 @@ def play_startup_image_and_sound(image_path, sound_path, display_time=None):
 # Function to initialize Pygame
 def initialize_pygame():
     try:
-        # Initialize Pygame and joystick
-        pygame.init()
-        pygame.joystick.init()
+        pygame.init()  # Initialize Pygame
+        pygame.joystick.init()  # Initialize joystick
         pygame.joystick.Joystick(0).init()
-        # joystick = pygame.joystick.Joystick(0)
         pygame.display.set_mode((1920, 1080))
         pygame.font.init()
 
-        # Get display info
-        info = pygame.display.Info()
+        info = pygame.display.Info()  # Get display info
         screen_width = info.current_w
         screen_height = info.current_h
 
-        # Set up the screen
         pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
-        # Hide the system mouse cursor
-        pygame.mouse.set_visible(False)
+        pygame.mouse.set_visible(False)  # Hide the system mouse cursor
     except Exception as e:
         print(f"Exception during initialization: {e}")
 
-# Use the framebuffer
+# Set environment variables for framebuffer
 os.putenv('SDL_VIDEODRIVER', 'fbcon')
 os.putenv('SDL_FBDEV', '/dev/fb0')
 context = Context()
@@ -290,32 +298,29 @@ clock = pygame.time.Clock()
 other_events = []
 monitor_usb()
 
-# Event loop
+# Main event loop
 while True:
     if isinstance(context.state , GameMenuState):
         for e in other_events:
-            if Event.USB_DETECTED == e.event_type:  # Add USB event check
+            if Event.USB_DETECTED == e.event_type:  # Check for USB events
                 context.handle_event(e)
                 other_events.pop(0)
 
         pygame_events = pygame.event.get()
-        # Check for the button and axis movement in order
         for e in pygame_events:
             if e.type == pygame.JOYAXISMOTION:
-                context.handle_event(Event(Event.JOYSTICK_MOVED,  games_list = games_list))
+                context.handle_event(Event(Event.JOYSTICK_MOVED,  games_list = games_list))  # Handle joystick movement
                 break
         for e in pygame_events:
             if e.type == pygame.USEREVENT:
-                context.handle_event(Event(Event.PRESSED_BUTTON , name = e.name))
+                context.handle_event(Event(Event.PRESSED_BUTTON , name = e.name))  # Handle button press
                 break
-        # For when exit transition happens
         if isinstance(context.state , GameMenuState):
-            pygame.display.flip()
+            pygame.display.flip()  # Update display
             clock.tick(60)
-    
+
     if isinstance(context.state , PlayingGameState):
-        # Check if USB has been mounted
-        # Check if the game is closed
+        # Handle events during PlayingGameState
         for e in other_events:
             context.handle_event(e)
             other_events.pop(0)
